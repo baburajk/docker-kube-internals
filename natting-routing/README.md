@@ -57,6 +57,8 @@ default via 192.168.2.1 dev enp8s0 proto static metric 101
 ##VM INTERFACE, NETWORK AND ROUTE DETAILS
 
 
+```
+
 virsh # net-dhcp-leases default
  Expiry Time          MAC address        Protocol  IP address                Hostname        Client ID or DUID
 -------------------------------------------------------------------------------------------------------------------
