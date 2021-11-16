@@ -1,6 +1,6 @@
 
 
-# DOCKER INTERNAL PACKET FLOW DETAILS
+## DOCKER INTERNAL PACKET FLOW DETAILS
 
 
-[ Routing, Natting across baremetals,vms and routers. ]  ( https://github.com/baburajk/docker-kube-internals/tree/main/natting-routing )
+* [ Docker routing, natting and packet flow ]  ( https://github.com/baburajk/docker-kube-internals/tree/main/natting-routing )
