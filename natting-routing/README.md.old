@@ -1,0 +1,228 @@
+
+## PACKET FLOW (ROUTE/NAT DETAILS) 
+### (ingress/egress) from docker -> vm -> baremetal -> router -> internet & back
+
+
+## REFERENCE 
+
+### BAREMETAL INTERFACE AND ROUTE DETAILS 
+
+
+```
+[root@mayura ~]# ip addr show
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host
+       valid_lft forever preferred_lft forever
+2: enp7s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 00:1f:bc:02:6f:10 brd ff:ff:ff:ff:ff:ff
+    inet 10.0.2.21/24 brd 10.0.2.255 scope global noprefixroute enp7s0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::33b3:7332:5e0e:a98a/64 scope link noprefixroute
+       valid_lft forever preferred_lft forever
+3: enp8s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 00:1f:bc:02:6f:11 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.2.21/24 brd 192.168.2.255 scope global noprefixroute enp8s0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::dcda:53b1:87fe:e92b/64 scope link noprefixroute
+       valid_lft forever preferred_lft forever
+4: virbr0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000
+    link/ether 52:54:00:a8:d1:80 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.122.1/24 brd 192.168.122.255 scope global virbr0
+       valid_lft forever preferred_lft forever
+    inet6 2001:db8:ca2:3::1/64 scope global
+       valid_lft forever preferred_lft forever
+    inet6 fe80::5054:ff:fea8:d180/64 scope link
+       valid_lft forever preferred_lft forever
+5: virbr0-nic: <BROADCAST,MULTICAST> mtu 1500 qdisc fq_codel master virbr0 state DOWN group default qlen 1000
+    link/ether 52:54:00:a8:d1:80 brd ff:ff:ff:ff:ff:ff
+6: vnet0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel master virbr0 state UNKNOWN group default qlen 1000
+    link/ether fe:54:00:01:1a:a2 brd ff:ff:ff:ff:ff:ff
+    inet6 fe80::fc54:ff:fe01:1aa2/64 scope link
+       valid_lft forever preferred_lft forever
+
+
+[root@mayura ~]# ip route show
+default via 10.0.2.1 dev enp7s0 proto static metric 100
+default via 192.168.2.1 dev enp8s0 proto static metric 101
+10.0.2.0/24 dev enp7s0 proto kernel scope link src 10.0.2.21 metric 100
+192.168.2.0/24 dev enp8s0 proto kernel scope link src 192.168.2.21 metric 101
+192.168.3.0/24 via 192.168.2.1 dev enp8s0 proto static metric 101
+192.168.122.0/24 dev virbr0 proto kernel scope link src 192.168.122.1
+
+
+
+```
+
+
+##VM INTERFACE, NETWORK AND ROUTE DETAILS
+
+
+```
+
+virsh # net-dhcp-leases default
+ Expiry Time          MAC address        Protocol  IP address                Hostname        Client ID or DUID
+-------------------------------------------------------------------------------------------------------------------
+ 2021-11-15 17:09:48  52:54:00:01:1a:a2  ipv4      192.168.122.120/24        rhel8a          01:52:54:00:01:1a:a2
+ 2021-11-15 17:31:24  52:54:00:01:1a:a2  ipv6      2001:db8:ca2:3:1::c2/64   rhel8a          00:04:9c:3f:36:30:fa:3b:56:d3:ae:1d:3a:e3:11:af:c0:25
+
+virsh # net-list --all
+ Name                 State      Autostart     Persistent
+----------------------------------------------------------
+ default              active     yes           yes
+
+virsh # net-dumpxml default
+<network connections='1'>
+  <name>default</name>
+  <uuid>cb35ff41-51ac-4cf9-b9fc-060aab583928</uuid>
+  <forward mode='nat'>
+    <nat>
+      <port start='1024' end='65535'/>
+    </nat>
+  </forward>
+  <bridge name='virbr0' stp='on' delay='0'/>
+  <mac address='52:54:00:a8:d1:80'/>
+  <ip address='192.168.122.1' netmask='255.255.255.0'>
+    <dhcp>
+      <range start='192.168.122.2' end='192.168.122.254'/>
+      <host mac='52:54:00:01:aa:00' name='rhelxx' ip='192.168.122.110'/>
+      <host mac='52:54:00:01:1a:a2' name='rhel8a' ip='192.168.122.120'/>
+      <host mac='52:54:00:01:1a:b3' name='rhel8b' ip='192.168.122.130'/>
+      <host mac='52:54:00:01:1a:c4' name='rhel8c' ip='192.168.122.140'/>
+      <host mac='52:54:00:01:1a:d5' name='rhel8d' ip='192.168.122.150'/>
+      <host mac='52:54:00:01:1b:aa' name='rhel8i' ip='192.168.122.125'/>
+      <host mac='52:54:00:01:1b:bb' name='rhel8j' ip='192.168.122.135'/>
+      <host mac='52:54:00:01:1b:cc' name='rhel8k' ip='192.168.122.145'/>
+      <host mac='52:54:00:01:1b:dd' name='rhel8l' ip='192.168.122.155'/>
+      <host mac='52:54:00:b2:5e:a6' name='rhel8p' ip='192.168.122.60'/>
+      <host mac='52:54:00:b2:5e:b7' name='rhel8q' ip='192.168.122.70'/>
+      <host mac='52:54:00:b2:5e:c8' name='rhel8r' ip='192.168.122.80'/>
+    </dhcp>
+  </ip>
+  <ip family='ipv6' address='2001:db8:ca2:3::1' prefix='64'>
+    <dhcp>
+      <range start='2001:db8:ca2:3:1::10' end='2001:db8:ca2:3:1::ff'/>
+    </dhcp>
+  </ip>
+</network>
+
+virsh # net-dhcp-leases default
+ Expiry Time          MAC address        Protocol  IP address                Hostname        Client ID or DUID
+-------------------------------------------------------------------------------------------------------------------
+ 2021-11-15 17:09:48  52:54:00:01:1a:a2  ipv4      192.168.122.120/24        rhel8a          01:52:54:00:01:1a:a2
+ 2021-11-15 17:31:24  52:54:00:01:1a:a2  ipv6      2001:db8:ca2:3:1::c2/64   rhel8a          00:04:9c:3f:36:30:fa:3b:56:d3:ae:1d:3a:e3:11:af:c0:25
+
+
+```
+
+
+### ICMP PACKET FLOW FROM A DOCKER CONTAINER THROUGH VM, BAREMETAL TO INTERNET
+
+
+Initiate a simple ping and capture the packets from each interfaces across VM, Server and Docker Containers
+
+
+```
+
+[root@0d1b1ae40269 /]# ping -c1 www.google.com
+PING www.google.com (142.250.115.106) 56(84) bytes of data.
+64 bytes from rq-in-f106.1e100.net (142.250.115.106): icmp_seq=1 ttl=103 time=25.0 ms
+
+--- www.google.com ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 25.008/25.008/25.008/0.000 ms
+
+
+```
+
+Packet capture indicates the traffic originating from containers local IP: 172.17.0.2 destined to 142.250.115.106. 
+
+```
+
+[root@0d1b1ae40269 /]# tcpdump -nni eth0 icmp
+dropped privs to tcpdump
+tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
+listening on eth0, link-type EN10MB (Ethernet), capture size 262144 bytes
+20:48:25.149412 IP 172.17.0.2 > 142.250.115.106: ICMP echo request, id 55, seq 1, length 64
+20:48:25.174413 IP 142.250.115.106 > 172.17.0.2: ICMP echo reply, id 55, seq 1, length 64
+
+```
+
+Interface on the VM also indicates same sourceIP without any NATing
+
+[root@rhel8a ~]# tcpdump -nni vethf274fbd icmp
+dropped privs to tcpdump
+tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
+listening on vethf274fbd, link-type EN10MB (Ethernet), capture size 262144 bytes
+14:48:25.149420 IP 172.17.0.2 > 142.250.115.106: ICMP echo request, id 55, seq 1, length 64
+14:48:25.174392 IP 142.250.115.106 > 172.17.0.2: ICMP echo reply, id 55, seq 1, length 64
+
+
+Packet capture on the Server's interface indicates the source ICMP originated from VM's IP , which is 192.168.122.120
+
+
+```
+
+[root@mayura ~]# tcpdump -nni vnet0 icmp
+tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
+listening on vnet0, link-type EN10MB (Ethernet), capture size 262144 bytes
+14:48:24.054618 IP 192.168.122.120 > 142.250.115.106: ICMP echo request, id 55, seq 1, length 64
+14:48:24.079254 IP 142.250.115.106 > 192.168.122.120: ICMP echo reply, id 55, seq 1, length 64
+
+```
+
+
+
+Chain POSTROUTING (policy ACCEPT 237 packets, 20509 bytes)
+ pkts bytes target     prot opt in     out     source               destination
+   12   869 MASQUERADE  all  --  *	!docker0  172.17.0.0/16        0.0.0.0/0
+    0     0 MASQUERADE  tcp  --  *	*	172.17.0.2           172.17.0.2           tcp dpt:443
+    0     0 MASQUERADE  tcp  --  *	*	172.17.0.2           172.17.0.2           tcp dpt:80
+
+
+
+
+
+[root@0d1b1ae40269 /]# tracepath 192.168.122.120
+ 1?: [LOCALHOST]                      pmtu 1500
+ 1:  rhel8a                                                0.087ms reached
+ 1:  rhel8a                                                0.048ms reached
+     Resume: pmtu 1500 hops 1 back 1
+
+
+Chain DOCKER (2 references)
+ pkts bytes target     prot opt in     out     source               destination
+   25 36084 RETURN     all  --  docker0 *	0.0.0.0/0            0.0.0.0/0
+    0     0 DNAT       tcp  --  !docker0 *	 0.0.0.0/0            0.0.0.0/0            tcp dpt:1443 to:172.17.0.2:443
+    0     0 DNAT       tcp  --  !docker0 *	 0.0.0.0/0            0.0.0.0/0            tcp dpt:180 to:172.17.0.2:80
+
+
+
+ a new DNAT (destination NAT) target. DNAT is commonly used to publish a service from internal network to an external IP. The rule states that each IP packet from any IP on destination port 5000 will be altered to internal IP 172.17.0.2 on port 5000.
+
+Reference
+
+Netfilter Hooks
+There are five netfilter hooks that programs can register with. As packets progress through the stack, they will trigger the kernel modules that have registered with these hooks. The hooks that a packet will trigger depends on whether the packet is incoming or outgoing, the packet’s destination, and whether the packet was dropped or rejected at a previous point.
+
+The following hooks represent various well-defined points in the networking stack:
+
+NF_IP_PRE_ROUTING: This hook will be triggered by any incoming traffic very soon after entering the network stack. This hook is processed before any routing decisions have been made regarding where to send the packet.
+NF_IP_LOCAL_IN: This hook is triggered after an incoming packet has been routed if the packet is destined for the local system.
+NF_IP_FORWARD: This hook is triggered after an incoming packet has been routed if the packet is to be forwarded to another host.
+NF_IP_LOCAL_OUT: This hook is triggered by any locally created outbound traffic as soon it hits the network stack.
+NF_IP_POST_ROUTING: This hook is triggered by any outgoing or forwarded traffic after routing has taken place and just before being put out on the wire.
+
+
+[root@rhel8a ~]# ip neigh
+172.17.0.2 dev docker0 lladdr 02:42:ac:11:00:02 STALE
+192.168.122.1 dev enp1s0 lladdr 52:54:00:a8:d1:80 REACHABLE
+fe80::5054:ff:fea8:d180 dev enp1s0 lladdr 52:54:00:a8:d1:80 router STALE
+2001:db8:ca2:3::1 dev enp1s0 lladdr 52:54:00:a8:d1:80 router STALE
+
+
+
+
+
